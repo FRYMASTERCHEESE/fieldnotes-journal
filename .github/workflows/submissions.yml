@@ -1,0 +1,23 @@
+name: Prepare approved author submissions
+on:
+  issues:
+    types: [opened, reopened]
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+concurrency:
+  group: article-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: contains(github.event.issue.body, '<!-- fieldnotes-submission -->')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - run: python scripts/prepare-submission.py
+        env:
+          GH_TOKEN: ${{ github.token }}

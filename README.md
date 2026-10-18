@@ -10,10 +10,10 @@ Requires Python 3.12 or newer.
 python -m pip install -r requirements.txt
 python build.py
 python -m unittest discover -s tests -v
-python -m http.server 8000 --directory dist
+python scripts/serve.py
 ```
 
-For root-level local preview, temporarily set `url` in `site.json` to `http://localhost:8000`, build, then restore it before committing. The production configuration uses the GitHub Pages project path.
+Open http://127.0.0.1:8000/fieldnotes-journal/ for a preview using the production project path. No configuration edit is required.
 
 ## Publish an article
 
@@ -48,10 +48,30 @@ In **Settings → Pages → Build and deployment → Source**, choose **GitHub A
 - Keep Python and GitHub Actions dependencies updated; Dependabot is configured monthly.
 - Launch articles are AI-assisted introductory editorial content, disclosed on the About page. Review them and replace them with your own writing as desired.
 - The contact page uses public GitHub issues; it does not deliver private messages. No invented email address, mailing list, analytics, cookies, or backend is configured.
-- The social image is SVG. Some social platforms will require a PNG or JPEG for image previews; metadata and text previews are provided.
-- The site has no paid services or external runtime assets. RSS requires an RSS reader. Search requires JavaScript; topic archives work without it.
+- Article and site social metadata now use a JPEG cover with alt text and large-image preview metadata. Facebook controls its own preview cache.
+- No paid service is configured. Custom author image attachments may be served from GitHub. RSS requires a reader; search and the editor require JavaScript. Reading and topic archives work without it.
 - Before using a custom domain, update `site.json`, configure GitHub Pages DNS and HTTPS, and rebuild.
 
 ## Verification
 
 Automated checks do not replace a full accessibility audit or testing in every browser. Verify mobile layout, keyboard navigation, search, article URLs, RSS, sitemap, and the deployed commit after significant changes.
+
+## Author Studio and Facebook
+
+Open `/studio/` to write and preview a draft, save it on the device, prepare an original or licensed cover, export a Facebook-size JPEG, and prepare an editor submission. The browser does not send drafts until the author follows the GitHub submission link and submits the issue. Local draft backups contain text, not selected local image files.
+
+Approved GitHub usernames and public bylines are maintained in `authors.json`; only FRYMASTERCHEESE is initially approved. Authors do not need repository write access. Keep editor write access restricted. The submissions workflow accepts JSON data from issues bearing its marker, checks the issue author's identity against the allowlist, validates fields and image URLs, then creates a separate draft branch. It attempts to open a review request automatically. If repository settings disable Actions-created pull requests, the issue receives a ready-to-open comparison link for the editor; no setting or credential expansion is required. Never enable automated merging or approvals for editorial content.
+
+The editor verifies original writing, facts, rights, credits and alt text, then merges. The deployment workflow runs build and browser checks before publishing. GitHub does not start pull-request workflows for changes created using GITHUB_TOKEN; run the test workflow on the submission branch manually for checks before merging. The merged commit is always checked before deployment.
+
+Every published article has a Facebook share link and a copy-caption button. Sharing remains the author's choice; there is no automatic social posting or connected Facebook credential. The image-resize tool does not upload local photos; upload a permitted photo as a GitHub attachment and use its public URL as a cover.
+
+## Accessibility and browser regression checks
+
+```sh
+npm ci
+npx playwright install chromium firefox webkit
+npm run test:browser
+```
+
+By default browser tests target the live website. Set `SITE_URL=http://127.0.0.1:8000/fieldnotes-journal/` to start and test the local production build. CI runs the suite before deployment and again against the live revision after deployment. Tests use axe for WCAG A/AA rules through 2.2 and best practices, plus keyboard skip navigation, search states, no-JavaScript reading, responsive reflow, enlarged and spaced text, editor drafting, image export, Facebook share metadata and feed/asset availability. A passing automated audit is not a formal accessibility certification or a screen-reader usability study.

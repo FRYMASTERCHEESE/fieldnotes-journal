@@ -1,0 +1,6 @@
+{
+  "name": "fieldnotes-journal",
+  "private": true,
+  "scripts": {"test:browser": "playwright test"},
+  "devDependencies": {"@playwright/test": "1.64.1", "@axe-core/playwright": "4.14.0"}
+}

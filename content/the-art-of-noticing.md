@@ -1,4 +1,4 @@
-{"title":"The quiet art of noticing more","description":"A small practice for finding fresh ideas in the places you already know.","date":"2026-10-18","category":"Everyday","draft":false}
+{"title": "The quiet art of noticing more", "description": "A small practice for finding fresh ideas in the places you already know.", "date": "2026-10-18", "category": "Everyday", "draft": false, "image": "assets/cover-coast.jpg", "image_alt": "AI-created illustration of a coastal path through golden grasses above a blue sea", "image_credit": "Original AI-created illustration for Fieldnotes", "image_license": "Illustrative artwork, not documentary photography"}
 ---
 There is a particular kind of discovery that does not require a journey. It happens when a familiar street becomes interesting again: a shadow reaches a doorway differently, a shop changes its window, or a tree loses its first leaf.
 

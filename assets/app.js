@@ -1,9 +1,18 @@
 (() => {
+  document.querySelectorAll('[data-copy-caption]').forEach(button => {
+    button.addEventListener('click',async()=>{
+      const status=button.parentElement.querySelector('.share-status');
+      try { await navigator.clipboard.writeText(button.dataset.copyCaption); status.textContent='Facebook caption copied. Paste it into your own Facebook post.'; }
+      catch { status.textContent='Copy the headline, introduction and this page’s URL to share the article.'; }
+    });
+  });
   const form = document.querySelector('#search-form');
   if (!form) return;
   const input = document.querySelector('#query');
   const results = document.querySelector('#results');
   const status = document.querySelector('#search-status');
+  form.hidden = false;
+  status.textContent = 'Enter a word to start exploring.';
   const site = new URL('../', document.currentScript?.src || document.querySelector('script[src$="app.js"]').src);
   let index;
   let sequence = 0;

@@ -1,7 +1,7 @@
 import unittest, json, sys, tempfile
 from pathlib import Path
 from html.parser import HTMLParser
-from urllib.parse import urlsplit, unquote
+from urllib.parse import urlsplit, unquote, urljoin
 import xml.etree.ElementTree as ET
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build
@@ -28,6 +28,7 @@ class SiteTests(unittest.TestCase):
             for link in doc.links:
                 parts=urlsplit(link)
                 if parts.scheme or parts.netloc: continue
+                parts=urlsplit(urljoin(build.URL+'/'+path.relative_to(build.OUT).as_posix(),link))
                 if not parts.path: target=path
                 else:
                     self.assertTrue(parts.path.startswith(build.BASE+'/'),link)
@@ -55,6 +56,11 @@ class SiteTests(unittest.TestCase):
         index=json.loads((build.OUT/'search.json').read_text())
         self.assertEqual({p['path'] for p in index},{p['path'] for p in build.load_posts()})
         self.assertTrue(all(p['text'] and p['title'] for p in index))
+    def test_markdown_blocks_unsafe_link_protocols(self):
+        html=build.safe_markdown('[unsafe](javascript:alert(1)) ![bad](data:text/html,test) [safe](https://example.com)')
+        self.assertNotIn('href="javascript:',html)
+        self.assertNotIn('src="data:',html)
+        self.assertIn('href="https://example.com"',html)
     def test_drafts_future_dates_and_unsafe_html(self):
         with tempfile.TemporaryDirectory(dir=build.ROOT) as tmp:
             old=build.ROOT; build.ROOT=Path(tmp); (build.ROOT/'content').mkdir()
