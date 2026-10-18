@@ -12,6 +12,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      OPENAI_GENERATION_CONFIGURED: ${{ secrets.OPENAI_API_KEY != '' }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-python@v7.0.0

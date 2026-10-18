@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const AxeBuilder = require('@axe-core/playwright').default;
-const paths = ['', 'about/', 'privacy/', 'contact/', 'categories/', 'categories/everyday/', 'categories/making/', 'categories/technology/', 'search/', 'studio/', 'publishing/', 'articles/the-art-of-noticing/', 'articles/make-something-small/', 'articles/a-calmer-digital-workspace/', '404.html'];
+const paths = ['', 'about/', 'privacy/', 'contact/', 'categories/', 'search/', 'studio/', 'publishing/', '404.html'];
 const url = path => new URL(path, process.env.SITE_URL || 'https://frymastercheese.github.io/fieldnotes-journal/').href;
 
 for (const path of paths) {
@@ -28,15 +28,15 @@ test('keyboard skip link and navigation', async ({page,browserName})=>{
   await page.keyboard.press('Enter');
   await expect(page.locator('main')).toBeFocused();
   await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Explore'}).click();
-  await page.getByRole('link',{name:/Technology.*stories/}).click();
-  await page.getByRole('heading',{name:'A calmer digital workspace'}).getByRole('link').click();
-  await expect(page.getByRole('heading',{level:1})).toHaveText('A calmer digital workspace');
+  await expect(page.getByText('Categories will appear when you publish your first article.')).toBeVisible();
+  await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Write',exact:true}).click();
+  await expect(page.getByLabel('Headline',{exact:true})).toBeVisible();
 });
 
 test('search results, empty query, no match, URL and safe text', async ({page})=>{
   await page.goto(url('search/?q=workspace'));
-  await expect(page.getByRole('status')).toHaveText('1 story found for “workspace”.');
-  await expect(page.locator('#results a')).toHaveText('A calmer digital workspace');
+  await expect(page.getByRole('status')).toHaveText('0 stories found for “workspace”.');
+  await expect(page.locator('#results a')).toHaveCount(0);
   for (const [query, expected] of [['zzzz-no-match','0 stories found'],['<img src=x onerror=alert(1)>','0 stories found'],['','Enter a word']]) {
     await page.getByRole('searchbox').fill(query);
     await page.getByRole('button',{name:'Search ↗'}).click();
@@ -53,7 +53,7 @@ test('search load failure is announced and retry succeeds',async ({page})=>{
   await expect(page.getByRole('status')).toContainText('Search could not load');
   await page.unroute('**/search.json');
   await page.getByRole('button',{name:'Search ↗'}).click();
-  await expect(page.getByRole('status')).toContainText('1 story found');
+  await expect(page.getByRole('status')).toContainText('0 stories found');
 });
 
 test('reading and topics remain usable without JavaScript', async ({browser})=>{
@@ -63,14 +63,12 @@ test('reading and topics remain usable without JavaScript', async ({browser})=>{
   await expect(page.getByRole('status')).toContainText('Search needs JavaScript.');
   await expect(page.getByRole('searchbox')).toBeHidden();
   await page.getByRole('link',{name:'Browse every topic instead.'}).click();
-  await page.getByRole('link',{name:/Making.*stories/}).click();
-  await page.getByRole('heading',{name:'Make something small. Finish it well.'}).getByRole('link').click();
-  await expect(page.locator('.prose')).toContainText('Describe one complete moment');
+  await expect(page.getByText('Categories will appear when you publish your first article.')).toBeVisible();
   await context.close();
 });
 
 test('text resizing and increased text spacing reflow',async ({page})=>{
-  for (const path of ['', 'search/', 'studio/', 'articles/the-art-of-noticing/']) {
+  for (const path of ['', 'search/', 'studio/', 'about/']) {
     await page.goto(url(path));
     await page.setViewportSize({width:320,height:900});
     await page.addStyleTag({content:'html{font-size:200%} *{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}'});
@@ -109,20 +107,76 @@ test('author studio prepares a reviewed submission without publishing',async({pa
   expect(audit.violations).toEqual([]);
 });
 
-test('Facebook share contains the published canonical URL',async({page})=>{
-  await page.goto(url('articles/the-art-of-noticing/'));
-  const link=page.getByRole('link',{name:'Share on Facebook ↗'});
-  const shared=new URL(await link.getAttribute('href'));
-  expect(shared.origin).toBe('https://www.facebook.com');
-  expect(shared.searchParams.get('u')).toBe('https://frymastercheese.github.io/fieldnotes-journal/articles/the-art-of-noticing/');
-  expect(await page.locator('[data-copy-caption]').getAttribute('data-copy-caption')).toContain('The quiet art of noticing more');
-  const image=await page.locator('meta[property="og:image"]').getAttribute('content');
-  expect(image).toMatch(/\.jpg$/);
+test('blank journal has no published articles or stale entries',async({page,request})=>{
+  await page.goto(url(''));
+  await expect(page.getByText('No articles published yet.')).toBeVisible();
+  await expect(page.locator('article.card')).toHaveCount(0);
+  await expect(page.getByRole('link',{name:'Write your first article ↗'})).toBeVisible();
+  expect(await (await request.get(url('search.json'))).json()).toEqual([]);
+  expect(await (await request.get(url('feed.xml'))).text()).not.toContain('<item>');
+  expect(await (await request.get(url('sitemap.xml'))).text()).not.toContain('/articles/');
+  for(const slug of ['the-art-of-noticing','make-something-small','a-calmer-digital-workspace']) {
+    expect((await request.get(url('articles/'+slug+'/'))).status()).toBe(404);
+  }
 });
 
 test('RSS, sitemap, robots and assets are served',async ({request})=>{
-  for(const path of ['feed.xml','sitemap.xml','robots.txt','search.json','assets/style.css','assets/app.js','assets/favicon.svg']) {
+  for(const path of ['feed.xml','sitemap.xml','robots.txt','search.json','generation-status.json','assets/style.css','assets/app.js','assets/favicon.svg']) {
     const response=await request.get(url(path)); expect(response.status()).toBe(200);
     expect((await response.body()).length).toBeGreaterThan(0);
   }
+});
+
+test('AI generation clearly stays inactive without setup',async({page})=>{
+  await page.route('**/generation-status.json',route=>route.fulfill({json:{available:false}}));
+  await page.goto(url('studio/'));
+  await expect(page.locator('#generation-availability')).toContainText('not activated');
+  await expect(page.locator('#generate-draft')).toBeDisabled();
+  await expect(page.locator('#generation-ready')).toBeHidden();
+  await expect(page.getByRole('link',{name:'Owner: activate AI generation'})).toHaveAttribute('href','../publishing/#activate-ai');
+});
+
+test('configured topic request prepares data without calling AI from browser',async({page})=>{
+  const providerRequests=[];page.on('request',request=>{if(request.url().includes('api.openai.com'))providerRequests.push(request.url());});
+  await page.route('**/generation-status.json',route=>route.fulfill({json:{available:true}}));
+  await page.goto(url('studio/'));
+  await expect(page.locator('#generate-draft')).toBeEnabled();
+  await page.getByLabel('What should the article be about?').fill('A welcoming neighbourhood');
+  await page.getByLabel('Angle or audience',{exact:false}).fill('A practical guide for local groups');
+  await page.locator('#generation-notes').fill('No verified reporting supplied.');
+  await page.locator('#generation-billing').check();
+  await page.locator('#generate-draft').click();
+  const body=await page.locator('#generation-data').inputValue();
+  expect(body).toContain('<!-- fieldnotes-ai-generate -->');
+  const data=JSON.parse(body.match(/```json\n([\s\S]+)\n```/)[1]);
+  expect(data.topic).toBe('A welcoming neighbourhood');expect(data.billing_confirmed).toBe(true);
+  await expect(page.locator('#generation-link')).toHaveAttribute('href',/github\.com\/FRYMASTERCHEESE\/fieldnotes-journal\/issues\/new\?/);
+  expect(providerRequests).toEqual([]);
+  const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']).analyze();
+  expect(audit.violations).toEqual([]);
+});
+
+test('generated review loads editable content and requires explicit approval',async({page})=>{
+  const revision='a'.repeat(40);
+  const draft={source_issue:7,image:'assets/generated/ai-7.jpg',title:'An original generated draft',description:'A practical draft that still needs the editor’s review.',body:'## Look a little closer\n\n'+'This is test fixture writing awaiting review. '.repeat(10),category:'Community',image_alt:'An illustrative community landscape',facebook_caption:'A friendly community starts with small steps.',review_notes:['Verify all local claims.']};
+  await page.route(`https://raw.githubusercontent.com/FRYMASTERCHEESE/fieldnotes-journal/${revision}/**`,route=>{
+    if(route.request().url().endsWith('.jpg'))return route.fulfill({path:'assets/cover-coast.jpg',contentType:'image/jpeg'});
+    return route.fulfill({json:draft});
+  });
+  await page.goto(url(`studio/?review=7&revision=${revision}`));
+  await expect(page.locator('#ai-review-status')).toContainText('Draft loaded');
+  await expect(page.getByLabel('Headline',{exact:true})).toHaveValue(draft.title);
+  await expect(page.locator('#rights-check')).not.toBeChecked();
+  await page.getByLabel('Headline',{exact:true}).fill('Edited and checked community story');
+  await page.getByLabel('Suggested caption',{exact:true}).fill('My edited Facebook caption.');
+  await page.locator('#review-image-alt').fill('An AI-created illustration of a welcoming community');
+  await page.locator('#rights-check').check();
+  await page.getByRole('button',{name:'Prepare approval to publish ↗'}).click();
+  const body=await page.locator('#submission-data').inputValue();
+  expect(body).toContain('<!-- fieldnotes-ai-approve -->');
+  const data=JSON.parse(body.match(/```json\n([\s\S]+)\n```/)[1]);
+  expect(data.source_issue).toBe(7);expect(data.source_revision).toBe(revision);expect(data.title).toBe('Edited and checked community story');expect(data.facebook_caption).toBe('My edited Facebook caption.');expect(data.rights_confirmed).toBe(true);
+  await expect(page.locator('#submission-explanation')).toContainText('Only the repository owner');
+  const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa','best-practice']).analyze();
+  expect(audit.violations).toEqual([]);
 });

@@ -48,3 +48,14 @@ button:disabled { opacity:.6; cursor:not-allowed; }
 .brand{white-space:normal} footer>*{min-width:0;max-width:100%}
 
 .card{min-width:0} @media(max-width:480px){.grid{grid-template-columns:minmax(0,1fr)}}
+.generator-panel,.review-panel { padding:28px; border:1px solid var(--line); background:#e8ecdf; margin:0 0 35px; min-width:0; }
+.generator-panel h2,.review-panel h2 { font-size:2rem; }
+.generator-panel form { max-width:850px; }
+.generator-panel label,.review-panel label { margin-top:18px; }
+.generator-panel input:not([type=checkbox]),.generator-panel textarea,.generator-panel select,.review-panel input { width:100%; min-width:0; padding:12px; border:1px solid var(--muted); border-radius:0; background:#fff; color:var(--ink); font:inherit; }
+.generator-panel .help,.review-panel p { font-size:.85rem; }
+.generator-panel .button { margin-top:18px; }
+.generation-options { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px; }
+.review-panel { background:#f0e4d4; }
+.ai-disclosure { background:#e8ecdf; padding:14px; font-size:.85rem; }
+@media(max-width:600px){.generator-panel,.review-panel{padding:20px}.generation-options{grid-template-columns:minmax(0,1fr);gap:0}}

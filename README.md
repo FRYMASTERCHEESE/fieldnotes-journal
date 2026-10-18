@@ -47,7 +47,7 @@ In **Settings → Pages → Build and deployment → Source**, choose **GitHub A
 - Edit brand, description, production URL, and author in `site.json`. Changing the project path requires updating image links and any hardcoded repository links in the contact page and this README.
 - Keep Python and GitHub Actions dependencies updated; Dependabot is configured monthly.
 - Launch articles are AI-assisted introductory editorial content, disclosed on the About page. Review them and replace them with your own writing as desired.
-- The contact page uses public GitHub issues; it does not deliver private messages. No invented email address, mailing list, analytics, cookies, or backend is configured.
+- The contact page uses public GitHub issues; it does not deliver private messages. No invented email address, mailing list, analytics, cookies, or private contact-form backend is configured.
 - Article and site social metadata now use a JPEG cover with alt text and large-image preview metadata. Facebook controls its own preview cache.
 - No paid service is configured. Custom author image attachments may be served from GitHub. RSS requires a reader; search and the editor require JavaScript. Reading and topic archives work without it.
 - Before using a custom domain, update `site.json`, configure GitHub Pages DNS and HTTPS, and rebuild.
@@ -75,3 +75,20 @@ npm run test:browser
 ```
 
 By default browser tests target the live website. Set `SITE_URL=http://127.0.0.1:8000/fieldnotes-journal/` to start and test the local production build. CI runs the suite before deployment and again against the live revision after deployment. Tests use axe for WCAG A/AA rules through 2.2 and best practices, plus keyboard skip navigation, search states, no-JavaScript reading, responsive reflow, enlarged and spaced text, editor drafting, image export, Facebook share metadata and feed/asset availability. A passing automated audit is not a formal accessibility certification or a screen-reader usability study.
+
+## Topic-to-draft AI generation — activation pending
+
+This feature is implemented but no API credential was added during delivery. Paid model calls have not been run or verified. The public studio says generation is inactive until setup is completed.
+
+1. Add an OpenAI API project key as a repository Actions secret named `OPENAI_API_KEY`. Never commit it or enter it in the public website, issue body or chat.
+2. Ensure the API project has billing and access to the models in `generation.json`. Defaults are `gpt-5-mini` for article text and `gpt-image-2` for one 1536 × 864 JPEG cover at medium quality. Models and a default limit of three approved-author topic requests per UTC day are configurable in that file. API usage is billed separately; configure provider-side billing controls.
+3. Run **Test and publish journal** on `main`. The build exposes only a Boolean setup status in `generation-status.json`; the API credential is never passed to the browser or build scripts.
+4. In Author Studio enter a topic, optional angle and source notes, choose a section and tone, then prepare and submit the GitHub generation issue. Requests and generated drafts are public. Only `authors.json` usernames can invoke the AI service.
+5. Open the review link returned in the issue comments. It loads the immutable generated draft and cover from a separate `ai-draft-N` branch. Edit the headline, body, image description and Facebook caption. Review notes flag claims to verify. The generator has no web-browsing tool and must not be treated as verified news reporting.
+6. Tick the editorial review confirmation and prepare the publication approval. Only the repository owner can submit an accepted approval. Approval commits the reviewed article and its image atomically to `main` and dispatches the existing test/deploy workflow. There is no auto-publication when generation completes, and no Facebook posting from any workflow. After deployment, use the published article’s Facebook share link or copy-caption button.
+
+Generation creates a draft Markdown file outside `content/`, the cover, and a review JSON file on its own branch. It never commits the draft to main. One request makes at most one text call and one image call, with no automatic paid retry. A started-attempt marker and existing-branch check prevent duplicate paid requests from workflow reruns. Create a fresh request after investigating a failure if a second attempt is wanted. Approval requires owner identity, the exact immutable draft reference, and explicit review confirmation; publication receipts prevent duplicated articles and permit deployment re-dispatch after a failed dispatch.
+
+Text uses Responses API JSON-schema output and `store:false`; images use the Images API and JPEG output. That setting does not promise zero provider retention for all services. Documentation: https://developers.openai.com/api/docs/guides/structured-outputs and https://developers.openai.com/api/docs/guides/image-generation . Generated material needs factual, originality and image review; no copyright-clearance guarantee is made.
+
+Backend tests use mocked provider responses and mocked GitHub calls to verify permissions, inactive behavior, rate limits, duplicate protection, draft isolation, API payloads and explicit owner approval. Browser tests use labelled test fixtures for active/review states. No paid AI output was used to claim an end-to-end provider test.

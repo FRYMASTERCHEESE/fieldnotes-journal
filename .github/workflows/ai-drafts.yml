@@ -1,0 +1,25 @@
+name: Generate and review AI drafts
+on:
+  issues:
+    types: [opened]
+permissions:
+  contents: write
+  issues: write
+  actions: write
+concurrency:
+  group: fieldnotes-ai-drafts
+  cancel-in-progress: false
+jobs:
+  draft:
+    if: contains(github.event.issue.body, '<!-- fieldnotes-ai-generate -->') || contains(github.event.issue.body, '<!-- fieldnotes-ai-approve -->')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - run: python scripts/ai_workflow.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
