@@ -16,7 +16,7 @@ jobs:
       OPENAI_GENERATION_CONFIGURED: ${{ secrets.OPENAI_API_KEY != '' }}
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-python@v7.0.0
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.12'
           cache: pip
